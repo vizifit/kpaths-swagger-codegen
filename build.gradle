@@ -1,0 +1,351 @@
+
+
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+
+        classpath "io.swagger:swagger-codegen:2.3.1"
+        classpath "com.moowork.gradle:gradle-node-plugin:1.2.0"
+    }
+}
+
+plugins {
+
+    id 'java'
+    id 'groovy'
+    id "de.undercouch.download" version "3.3.0"
+    id "com.moowork.node" version "1.2.0"
+}
+
+apply plugin: 'groovy'
+apply plugin: 'com.moowork.node'
+
+dependencies {
+    compile gradleApi()
+    compile localGroovy()
+}
+
+
+repositories {
+    mavenCentral()
+}
+
+
+
+
+import org.gradle.api.tasks.Exec
+import org.apache.tools.ant.taskdefs.condition.Os
+
+ext {
+    spring_boot_version = '1.5.6.RELEASE'
+    jackson_version = '2.4.2'
+    jersey_version = '1.18'
+    jodatime_version = '2.3'
+    junit_version = '4.8.1'
+    swagger_codegen_version ='2.3.1'
+    npmCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? 'npm.cmd' : 'npm'
+    bowerCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? 'bower.cmd' : 'bower'
+}
+
+defaultTasks  'generateCode'
+
+version = 'R4 Development'
+group = 'org.kp.cccs.kpaths'
+
+
+
+def swaggerConfigPath = './configuration/kpaths-swagger-config.json'
+def swaggerConfigProperties
+
+// Tasks
+
+task initConfiguration {
+
+    delete(buildDir)
+
+    def jsonFile = file(swaggerConfigPath)
+    swaggerConfigProperties = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+}
+
+task generateCode {
+
+    prepareForBuild(swaggerConfigProperties)
+
+    downloadSpecificationFiles(swaggerConfigProperties)
+
+    generateClientApiLibrary(swaggerConfigProperties)
+
+}
+
+
+def prepareForBuild(swaggerConfigProperties){
+
+    wrapComment("line", "${swaggerConfigProperties.config.name} Version: ${swaggerConfigProperties.config.version}")
+
+    println "Cleaning up build directory...\n"
+
+}
+
+
+def buildFileName(componentKey, swaggerSpecOutputDir, swaggerSpecPrefixName, message) {
+
+    def filename = "${swaggerSpecOutputDir}${componentKey + swaggerSpecPrefixName}.json"
+
+    println message + " " + filename + "..."
+
+    return filename
+}
+
+def wrapComment(type, comment ){
+
+    switch (type){
+
+        case  "line":
+            println "\n------------------------------------"
+            println "${comment}"
+            println "--------------------------------------\n"
+            break
+    }
+
+}
+
+def downloadSpecificationFiles(swaggerConfig){
+
+    def swaggerSpecOutputDir = swaggerConfig.config.swaggerProperties.swaggerSpecOutputDir
+    def swaggerSpecPrefixName = swaggerConfig.config.swaggerProperties.swaggerSpecPrefixName
+    def componentSpecData = swaggerConfig.config.componentSpecData
+
+    wrapComment("line", "START: Downloading specification files...")
+
+    // Loop through specification data
+    for ( componentSpec in componentSpecData ) {
+
+        if(componentSpec.active){
+            download {
+                src componentSpec.href
+                dest file(buildFileName(componentSpec.key, swaggerSpecOutputDir, swaggerSpecPrefixName, "Saving specification for: "))
+            }
+        }
+    }
+
+    wrapComment("line", "COMPLETED: Downloading specification files...")
+
+}
+
+def generateClientApiLibrary(swaggerConfig){
+
+    def specDir = swaggerConfig.config.swaggerProperties.swaggerSpecOutputDir
+    def codeGenDir = swaggerConfig.config.swaggerProperties.swaggerCodeGenOutputDir
+    def templateDir = swaggerConfig.config.swaggerProperties.swaggerClientTemplateDir
+    def specPfx = swaggerConfig.config.swaggerProperties.swaggerSpecPrefixName
+    def language = swaggerConfig.config.swaggerProperties.swaggerClientLanguage
+    def componentSpecData = swaggerConfig.config.componentSpecData
+
+    wrapComment("line", "START: Generating Client api... ")
+
+    for ( componentSpec in componentSpecData ) {
+
+        if(componentSpec.active){
+
+            generateSwaggerCode(componentSpec.key, language, codeGenDir, buildFileName(componentSpec.key, specDir, specPfx, "Generating Swagger Code for: "))
+
+            copyAngularTemplateFiles(componentSpec.key, language, templateDir, "${codeGenDir}/${componentSpec.key}" )
+
+            replaceJsonPackageContent("${codeGenDir}/${componentSpec.key}/package.json",componentSpec.key, language, "1.0.0")
+        }
+    }
+
+    wrapComment("line", "COMPLETED: Generating Client api...")
+}
+
+
+
+import io.swagger.codegen.config.CodegenConfigurator
+import io.swagger.codegen.DefaultGenerator
+
+
+def generateSwaggerCode(componentKey, swaggerClientLanguage, swaggerCodeGenOutputDir, filename){
+
+    println "\nGenerating Client [${swaggerClientLanguage}] api code for:  ${componentKey}"
+
+    // Swagger Code generation
+    def outputPath = swaggerCodeGenOutputDir + componentKey
+    def outputDir = file(outputPath)
+    def config = new CodegenConfigurator()
+
+    config.setInputSpec(filename as String)
+    config.setOutputDir(outputDir.path)
+    config.setLang(swaggerClientLanguage as String)
+    config.setAdditionalProperties([
+            'invokerPackage': '',
+            'modelPackage'  : 'model',
+            'apiPackage'    : 'api',
+            'dateLibrary'   : 'java8'
+    ])
+    config.setImportMappings([
+            'Dog': 'io.swagger.petstore.client.model.Dog'
+    ])
+    new DefaultGenerator().opts(config.toClientOptInput()).generate()
+
+}
+
+def replaceJsonPackageContent(filePath, componentKey, language, version){
+
+    wrapComment("line", "Updating package.json: ${filePath}")
+
+    def jsonFile = file(filePath)
+
+    def slurped = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+    def builder = new groovy.json.JsonBuilder(slurped)
+
+    builder.content.name = "@Swagger/KPATHS ${componentKey} Component API"
+    builder.content.version = version
+    builder.content.description = "Swagger [${language}] client for KPATHS ${componentKey} Component"
+    builder.content.author = "Kaiser Permanente CD-BIO Engineering"
+
+
+    // Get the new JSON string
+    //String newJson = builder.toPrettyString()
+
+    // And write it out to the file again
+    jsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
+
+}
+
+
+def copyAngularTemplateFiles(componentKey, swaggerClientLanguage, sourcePath, destinationPath){
+
+    println "\nCopying ${swaggerClientLanguage} template files for component:  ${componentKey}"
+
+    String sourceDir = sourcePath
+    String destinationDir = destinationPath
+
+    ant.copy(todir: destinationDir) {
+        fileset(dir : sourceDir) {
+            exclude(name:"*.java")
+        }
+    }
+}
+
+
+// Get the path for the locally installed binaries
+task npmBin << {
+    new ByteArrayOutputStream().withStream { os ->
+        exec {
+            executable = npmCommand
+            args = ['bin']
+            standardOutput = os
+        }
+        ext.binPath = os.toString().trim() + File.separator
+    }
+}
+
+//npmInstall.dependsOn(generateCode)
+//
+//clean.doFirst {
+//    delete(swaggerCodeGenOutputDir)
+//}
+// Install packages from package.json
+//task npmSwagger(type: Exec) {
+//    description = "Grab NodeJS dependencies (from package.json)"
+//
+//
+//    commandLine = [npmCommand, "install"]
+//    inputs.file "package.json"
+//    outputs.dir "node_modules"
+//
+//    tasks.npmBin.execute()
+//
+//}
+
+
+
+task buildProjectManifest(type: Copy) {
+    from 'templates/project'
+    into "$buildDir"
+    include 'projectinfo.html.template'
+    rename { file -> 'swagger-project-detail.html' }
+    expand(project: project, title: 'Swagger Project Detail', generated: new Date())
+
+
+}
+
+configurations {
+    swagger
+}
+
+sourceSets {
+    swagger {
+        compileClasspath = configurations.swaggerCompile
+        java {
+            srcDir file("${project.buildDir.path}/swagger/src/main/java")
+        }
+    }
+    main {
+        compileClasspath += swagger.output
+        runtimeClasspath += swagger.output
+    }
+    test {
+        compileClasspath += swagger.output
+        runtimeClasspath += swagger.output
+    }
+}
+
+//generateApi.dependsOn(generateFiles)
+//compileSwaggerJava.dependsOn generateApi
+//classes.dependsOn swaggerClasses
+//compileJava.dependsOn compileSwaggerJava
+
+
+
+buildProjectManifest.dependsOn(initConfiguration)
+generateCode.dependsOn(buildProjectManifest)
+
+
+
+
+dependencies {
+    swaggerCompile "org.springframework.boot:spring-boot-starter-web:$spring_boot_version"
+    swaggerCompile 'io.swagger:swagger-annotations:1.5.16'
+    swaggerCompile 'com.squareup.okhttp:okhttp:2.7.5'
+    swaggerCompile 'com.squareup.okhttp:logging-interceptor:2.7.5'
+    swaggerCompile 'com.google.code.gson:gson:2.8.1'
+
+    //compile sourceSets.swagger.output
+
+    compile "com.sun.jersey:jersey-client:$jersey_version"
+    compile "com.sun.jersey.contribs:jersey-multipart:$jersey_version"
+    compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:2.1.5"
+    compile "joda-time:joda-time:$jodatime_version"
+    compile "io.swagger:swagger-codegen:$swagger_codegen_version"
+
+    testCompile "junit:junit:$junit_version"
+
+    runtime 'com.squareup.okhttp:okhttp:2.7.5'
+    runtime 'com.squareup.okhttp:logging-interceptor:2.7.5'
+    runtime 'com.google.code.gson:gson:2.8.1'
+}
+
+//installDebug -q &> /dev/null
+// Required for build configuration arguments (./gradelew installDebug -q &> /dev/null)
+//gradle.useLogger(new CustomEventLogger())
+//
+//class CustomEventLogger extends BuildAdapter implements TaskExecutionListener {
+//
+//    void beforeExecute(Task task) {
+//        println "[$task.name]"
+//    }
+//
+//    void afterExecute(Task task, TaskState state) {
+//        println()
+//    }
+//
+//}

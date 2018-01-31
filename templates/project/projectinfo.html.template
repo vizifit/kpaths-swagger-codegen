@@ -1,0 +1,17 @@
+<html>
+<head>
+    <title>${title}</title>
+</head>
+<body>
+<h1>${project.name}</h1>
+
+<ul>
+    <% project.properties.findAll { k,v -> v instanceof String }.each { key, value -> %>
+    <li>$key = $value</li>
+    <% } %>
+</ul>
+
+<hr />
+<p>Generated on ${generated.format('dd-MM-yyyy')}</p>
+</body>
+</html>

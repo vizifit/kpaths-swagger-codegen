@@ -1,0 +1,24 @@
+{
+  "config" :
+  {
+    "name" : "KPATHS Swagger Component API Generator",
+    "version" : "1.0",
+
+    "componentSpecData" : [
+      {"key" : "Booking", "href" : "http://petstore.swagger.io/v2/swagger.json", "active" : true},
+      {"key" : "FacilityInfo", "href" : "http://petstore.swagger.io/v2/swagger.json", "active" : true},
+      {"key" : "Main", "href" : "http://petstore.swagger.io/v2/swagger.json", "active" : true}
+    ],
+
+    "swaggerProperties" :
+    {
+        "swaggerBuildRoot" : "build/swagger",
+        "swaggerCodeGenOutputDir" : "build/swagger/codegen/",
+        "swaggerSpecOutputDir" : "build/swagger/spec/",
+        "swaggerDeploymentOutputDir" : "build/swagger/deploy/",
+        "swaggerClientLanguage" : "typescript-angular",
+        "swaggerSpecPrefixName" : "Specification",
+        "swaggerClientTemplateDir" : "templates/angular"
+    }
+  }
+}
