@@ -66,7 +66,7 @@ def swaggerConfigProperties
 
 task initConfiguration {
 
-    delete(buildDir)
+    //delete(buildDir)
 
     def jsonFile = file(swaggerConfigPath)
     swaggerConfigProperties = new groovy.json.JsonSlurper().parseText(jsonFile.text)
@@ -76,7 +76,7 @@ task generateCode {
 
     prepareForBuild(swaggerConfigProperties)
 
-    downloadSpecificationFiles(swaggerConfigProperties)
+    //downloadSpecificationFiles(swaggerConfigProperties)
 
     generateClientApiLibrary(swaggerConfigProperties)
 
