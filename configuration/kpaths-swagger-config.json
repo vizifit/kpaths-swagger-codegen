@@ -1,24 +1,71 @@
 {
-  "config" :
-  {
-    "name" : "KPATHS Swagger Component API Generator",
-    "version" : "1.0",
-
-    "componentSpecData" : [
-      {"key" : "Booking", "href" : "http://petstore.swagger.io/v2/swagger.json", "active" : true},
-      {"key" : "FacilityInfo", "href" : "http://petstore.swagger.io/v2/swagger.json", "active" : true},
-      {"key" : "Main", "href" : "http://petstore.swagger.io/v2/swagger.json", "active" : true}
-    ],
-
-    "swaggerProperties" :
-    {
-        "swaggerBuildRoot" : "build/swagger",
-        "swaggerCodeGenOutputDir" : "build/swagger/codegen/",
-        "swaggerSpecOutputDir" : "build/swagger/spec/",
-        "swaggerDeploymentOutputDir" : "build/swagger/deploy/",
-        "swaggerClientLanguage" : "typescript-angular",
-        "swaggerSpecPrefixName" : "Specification",
-        "swaggerClientTemplateDir" : "templates/angular"
+    "config": {
+        "name": "KPATHS Swagger Component API Generator",
+        "description": "KPATHS Swagger Component API Generator",
+        "version": "1.0.0",
+        "author": "Tony Henderson",
+        "kpaths": {
+            "bumpVersion": true,
+            "bumpVersionStep": "patch",
+            "componentList": [
+                {
+                    "key": "booking",
+                    "version": "1.0.18",
+                    "href": "http://petstore.swagger.io/v2/swagger.json",
+                    "active": true
+                },
+                {
+                    "key": "facilityinfo",
+                    "version": "1.0.18",
+                    "href": "http://petstore.swagger.io/v2/swagger.json",
+                    "active": true
+                },
+                {
+                    "key": "main",
+                    "version": "1.0.18",
+                    "href": "http://petstore.swagger.io/v2/swagger.json",
+                    "active": true
+                }
+            ]
+        },
+        "swagger": {
+            "specPfx": "Specification",
+            "dir": {
+                "root": "build/swagger",
+                "clientApi": "build/swagger/clientApi",
+                "clientSpec": "build/swagger/clientSpec",
+                "deployment": "build/swagger/deploy"
+            },
+            "client": {
+                "language": "typescript-angular",
+                "prefix": {
+                    "repo": "kpaths-clientapi",
+                    "module": "kpaths-client-api",
+                    "title": "@KPaths/client-api"
+                },
+                "suffix": {
+                    "specification": "-specification"
+                },
+                "package": {
+                    "root": "src",
+                    "lib": "src/lib",
+                    "app": "src/app",
+                    "test": "test"
+                }
+            }
+        },
+        "templates": {
+            "dir": {
+                "clientRoot": "templates/client-root",
+                "clientSrc": "templates/client-src",
+                "clientSrcLib": "templates/client-src-lib",
+                "clientSrcApp": "templates/client-src-app",
+                "project": "templates/project",
+                "gradle": "templates/gradle-wrapper"
+            }
+        },
+        "gradle": {
+            "includeWrapper": true
+        }
     }
-  }
 }

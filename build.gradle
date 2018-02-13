@@ -1,5 +1,4 @@
 
-
 buildscript {
     repositories {
         mavenCentral()
@@ -8,35 +7,25 @@ buildscript {
         }
     }
     dependencies {
-
         classpath "io.swagger:swagger-codegen:2.3.1"
         classpath "com.moowork.gradle:gradle-node-plugin:1.2.0"
     }
 }
 
 plugins {
-
     id 'java'
     id 'groovy'
     id "de.undercouch.download" version "3.3.0"
     id "com.moowork.node" version "1.2.0"
 }
 
+apply plugin: 'java'
 apply plugin: 'groovy'
 apply plugin: 'com.moowork.node'
-
-dependencies {
-    compile gradleApi()
-    compile localGroovy()
-}
-
 
 repositories {
     mavenCentral()
 }
-
-
-
 
 import org.gradle.api.tasks.Exec
 import org.apache.tools.ant.taskdefs.condition.Os
@@ -54,55 +43,59 @@ ext {
 
 defaultTasks  'generateCode'
 
-version = 'R4 Development'
+version = '1.0.1'
 group = 'org.kp.cccs.kpaths'
-
-
-
-def swaggerConfigPath = './configuration/kpaths-swagger-config.json'
-def swaggerConfigProperties
+ 
+def kpathCodegenPath = './configuration/kpaths-swagger-config.json'
+def kpathCodegen
+ 
 
 // Tasks
-
 task initConfiguration {
 
-    //delete(buildDir)
+    delete(buildDir)
 
-    def jsonFile = file(swaggerConfigPath)
-    swaggerConfigProperties = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+    def jsonFile = file(kpathCodegenPath)
+    kpathCodegen = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+
+    def bumpVersion = kpathCodegen.config.kpaths.bumpVersion
+
+    // Update Component version & configuration
+    if(bumpVersion){
+        updateComponentBuildVersion(kpathCodegen, kpathCodegenPath) 
+
+        jsonFile = file(kpathCodegenPath)
+        kpathCodegen = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+    }
 }
 
 task generateCode {
 
-    prepareForBuild(swaggerConfigProperties)
-
-    //downloadSpecificationFiles(swaggerConfigProperties)
-
-    generateClientApiLibrary(swaggerConfigProperties)
-
+    prepareForBuild(kpathCodegen)
+    downloadSpecificationFiles(kpathCodegen)
+    generateClientApiLibrary(kpathCodegen)
 }
 
 
-def prepareForBuild(swaggerConfigProperties){
+def prepareForBuild(kpathCodegen){ 
+    wrapComment("line", "${kpathCodegen.config.name} Version: ${kpathCodegen.config.version}")
 
-    wrapComment("line", "${swaggerConfigProperties.config.name} Version: ${swaggerConfigProperties.config.version}")
-
-    println "Cleaning up build directory...\n"
-
+    println "Cleaning up build directory...\n" 
 }
 
 
-def buildFileName(componentKey, swaggerSpecOutputDir, swaggerSpecPrefixName, message) {
+def buildFileName(componentKey, kpathCodegen) {
 
-    def filename = "${swaggerSpecOutputDir}${componentKey + swaggerSpecPrefixName}.json"
+    def specDir = kpathCodegen.config.swagger.dir.clientSpec
+    def specSuffix = kpathCodegen.config.swagger.client.suffix.specification
+    def filename = "${specDir}/${componentKey + specSuffix}.json"
 
-    println message + " " + filename + "..."
+    println "Creating filename for: " + filename + "..."
 
     return filename
 }
 
-def wrapComment(type, comment ){
-
+def wrapComment(type, comment ){ 
     switch (type){
 
         case  "line":
@@ -110,129 +103,340 @@ def wrapComment(type, comment ){
             println "${comment}"
             println "--------------------------------------\n"
             break
-    }
-
+    } 
 }
 
-def downloadSpecificationFiles(swaggerConfig){
-
-    def swaggerSpecOutputDir = swaggerConfig.config.swaggerProperties.swaggerSpecOutputDir
-    def swaggerSpecPrefixName = swaggerConfig.config.swaggerProperties.swaggerSpecPrefixName
-    def componentSpecData = swaggerConfig.config.componentSpecData
+def downloadSpecificationFiles(kpathCodegen){
+ 
+    def componentList = kpathCodegen.config.kpaths.componentList
 
     wrapComment("line", "START: Downloading specification files...")
 
     // Loop through specification data
-    for ( componentSpec in componentSpecData ) {
-
-        if(componentSpec.active){
+    for ( component in componentList ) {
+        if(component.active){
             download {
-                src componentSpec.href
-                dest file(buildFileName(componentSpec.key, swaggerSpecOutputDir, swaggerSpecPrefixName, "Saving specification for: "))
+                src component.href
+                dest file( buildFileName(component.key.toLowerCase(), kpathCodegen)) 
             }
         }
-    }
-
-    wrapComment("line", "COMPLETED: Downloading specification files...")
-
+    } 
+    wrapComment("line", "COMPLETED: Downloading specification files...") 
 }
 
-def generateClientApiLibrary(swaggerConfig){
+def getClientRepoRoot(componentKey, kpathCodegen){
 
-    def specDir = swaggerConfig.config.swaggerProperties.swaggerSpecOutputDir
-    def codeGenDir = swaggerConfig.config.swaggerProperties.swaggerCodeGenOutputDir
-    def templateDir = swaggerConfig.config.swaggerProperties.swaggerClientTemplateDir
-    def specPfx = swaggerConfig.config.swaggerProperties.swaggerSpecPrefixName
-    def language = swaggerConfig.config.swaggerProperties.swaggerClientLanguage
-    def componentSpecData = swaggerConfig.config.componentSpecData
+    def clientApi = kpathCodegen.config.swagger.dir.clientApi   
+    def clientRepoPfx = kpathCodegen.config.swagger.client.prefix.repo    
+    def root = "${clientApi}/${clientRepoPfx}${componentKey.toLowerCase()}"
+    
+    println "getClientRepoRoot: ${root}"
+    
+    return root
+}
 
-    wrapComment("line", "START: Generating Client api... ")
+def getClientLibRoot(componentKey, kpathCodegen, isRelPath){
 
-    for ( componentSpec in componentSpecData ) {
+    def componentName = componentKey.toLowerCase()
+    def clientApi = kpathCodegen.config.swagger.dir.clientApi
+    def clientRepoPfx = "${kpathCodegen.config.swagger.client.prefix.repo}${componentName}"     
+    def pkgLib = kpathCodegen.config.swagger.client.package.lib 
+    def libPrefix = "${pkgLib}/${getClientLibPrefix(componentKey, kpathCodegen)}"
+    def root = "${clientApi}/${clientRepoPfx}/${libPrefix}"
 
-        if(componentSpec.active){
-
-            generateSwaggerCode(componentSpec.key, language, codeGenDir, buildFileName(componentSpec.key, specDir, specPfx, "Generating Swagger Code for: "))
-
-            copyAngularTemplateFiles(componentSpec.key, language, templateDir, "${codeGenDir}/${componentSpec.key}" )
-
-            replaceJsonPackageContent("${codeGenDir}/${componentSpec.key}/package.json",componentSpec.key, language, "1.0.0")
-        }
+    if(isRelPath){
+        root = libPrefix  
     }
+    
+    println "getClientLibRoot: ${root}"
 
+    return root
+}
+ 
+def getClientLibPrefix(componentKey, kpathCodegen){
+    def libPrefix = "${kpathCodegen.config.swagger.client.prefix.module}-${componentKey.toLowerCase()}"
+}
+
+def generateClientApiLibrary(kpathCodegen){
+  
+    wrapComment("line", "START: Generating Client api... ") 
+    def componentList = kpathCodegen.config.kpaths.componentList
+     
+    // Replace Template values
+    for ( component in componentList ) {
+
+        if(component.active){ 
+
+            // Generate code from Swagger logic
+            generateSwaggerCode(kpathCodegen, component.key)
+
+            // Copy Templates and supporting files
+            copyProjectTemplateFiles(kpathCodegen, component.key)
+
+            // Replace Template values
+            replaceProjectTemplateFileValues(kpathCodegen, component.key, component.version) 
+        }
+    } 
     wrapComment("line", "COMPLETED: Generating Client api...")
 }
 
+def updateComponentBuildVersion(kpathCodegen, kpathCodegenPath){
 
+    def componentList = kpathCodegen.config.kpaths.componentList
+    def bumpVersion = kpathCodegen.config.kpaths.bumpVersion
+    def bumpVersionStep = kpathCodegen.config.kpaths.bumpVersionStep
 
-import io.swagger.codegen.config.CodegenConfigurator
-import io.swagger.codegen.DefaultGenerator
-
-
-def generateSwaggerCode(componentKey, swaggerClientLanguage, swaggerCodeGenOutputDir, filename){
-
-    println "\nGenerating Client [${swaggerClientLanguage}] api code for:  ${componentKey}"
-
-    // Swagger Code generation
-    def outputPath = swaggerCodeGenOutputDir + componentKey
-    def outputDir = file(outputPath)
-    def config = new CodegenConfigurator()
-
-    config.setInputSpec(filename as String)
-    config.setOutputDir(outputDir.path)
-    config.setLang(swaggerClientLanguage as String)
-    config.setAdditionalProperties([
-            'invokerPackage': '',
-            'modelPackage'  : 'model',
-            'apiPackage'    : 'api',
-            'dateLibrary'   : 'java8'
-    ])
-    config.setImportMappings([
-            'Dog': 'io.swagger.petstore.client.model.Dog'
-    ])
-    new DefaultGenerator().opts(config.toClientOptInput()).generate()
-
-}
-
-def replaceJsonPackageContent(filePath, componentKey, language, version){
-
-    wrapComment("line", "Updating package.json: ${filePath}")
-
-    def jsonFile = file(filePath)
-
+    def jsonFile = file(kpathCodegenPath) 
     def slurped = new groovy.json.JsonSlurper().parseText(jsonFile.text)
     def builder = new groovy.json.JsonBuilder(slurped)
+     
+    wrapComment("line", "BEGIN: Updating component versions for ${bumpVersionStep}...")
+    def counter = 0
 
-    builder.content.name = "@Swagger/KPATHS ${componentKey} Component API"
-    builder.content.version = version
-    builder.content.description = "Swagger [${language}] client for KPATHS ${componentKey} Component"
-    builder.content.author = "Kaiser Permanente CD-BIO Engineering"
+    for ( component in componentList ) {
+        if(component.active){ 
+ 
+            def versionParts = component.version.split('\\.')
+            def updatedVersion = "" 
+            def major = versionParts[0]
+            def minor = versionParts[1]
+            def patch = versionParts[2]
 
+            def updateValue = 0
+            switch(bumpVersionStep){
 
-    // Get the new JSON string
-    //String newJson = builder.toPrettyString()
+                case "major":
+                    updateValue = major as int
+                    updateValue++
+                    updatedVersion =  "${updateValue}.${minor}.${patch}"
+                    break
 
-    // And write it out to the file again
+                case "minor":
+                    updateValue = minor as int
+                    updateValue++
+                    updatedVersion =  "${major}.${updateValue}.${patch}"
+                    break
+
+                case "patch":
+                    updateValue = patch as int
+                    updateValue++
+                    updatedVersion =  "${major}.${minor}.${updateValue}"
+                    break
+            } 
+            builder.content.config.kpaths.componentList[ counter ].version = updatedVersion
+            println("Bumping ${bumpVersionStep} version from ${component.version} to ${updatedVersion} for component: ${component.key}" )
+        }
+
+        counter++
+    } 
+
+    // Write updated configuration
     jsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
-
+    
+    wrapComment("line", "COMPLETED: Updating component versionsUpdating component versions for ${bumpVersionStep}...")
 }
 
+def copyProjectTemplateFiles(kpathCodegen, componentKey){
 
-def copyAngularTemplateFiles(componentKey, swaggerClientLanguage, sourcePath, destinationPath){
+    def pkgSrcRoot = kpathCodegen.config.swagger.client.package.root
+    def pkgSrcLib = kpathCodegen.config.swagger.client.package.lib
+    def pkgSrcApp = kpathCodegen.config.swagger.client.package.app
 
-    println "\nCopying ${swaggerClientLanguage} template files for component:  ${componentKey}"
+    // Template
+    def tmpClientRoot = kpathCodegen.config.templates.dir.clientRoot
+    def tmpClientSrc = kpathCodegen.config.templates.dir.clientSrc
+    def tmpclientSrcApp = kpathCodegen.config.templates.dir.clientSrcApp
+    def tmpClientSrcLib = kpathCodegen.config.templates.dir.clientSrcLib 
+    def tmpProjectDir = kpathCodegen.config.templates.dir.project
+    def tmpGradleDir = kpathCodegen.config.templates.dir.gradle
 
-    String sourceDir = sourcePath
-    String destinationDir = destinationPath
+    // Manipulate code after SwaggerGeneration
+    copyFilestoDirectory( tmpClientRoot, getClientRepoRoot(componentKey, kpathCodegen), null )
+    //copyFilestoDirectory( tmpProjectDir, getClientRepoRoot(componentKey, kpathCodegen), "*.template" )
+    copyFilestoDirectory( tmpClientSrc, "${getClientRepoRoot(componentKey, kpathCodegen)}/${pkgSrcRoot}", null )
+    
+    //copyFilestoDirectory( tmpClientSrcLib, getClientRepoRoot(componentKey, kpathCodegen), null )
+    
+    // Save for later
+    copyFilestoDirectory( tmpclientSrcApp, "${getClientRepoRoot(componentKey, kpathCodegen)}/${pkgSrcApp}", null )
 
-    ant.copy(todir: destinationDir) {
-        fileset(dir : sourceDir) {
-            exclude(name:"*.java")
-        }
+    // Include Gradle Wrapper
+    def includeWrapper = kpathCodegen.config.gradle.includeWrapper 
+    if(includeWrapper){
+        copyFilestoDirectory( tmpGradleDir, getClientRepoRoot(componentKey, kpathCodegen), null )
     }
 }
 
 
+def replaceProjectTemplateFileValues(kpathCodegen, componentKey, componentVersion){
+
+    def pkgSrc = kpathCodegen.config.swagger.client.package.root
+    def pkgLibSrc = kpathCodegen.config.swagger.client.package.lib 
+    def pkgAppSrc = kpathCodegen.config.swagger.client.package.app   
+    def language = kpathCodegen.config.swagger.client.language 
+    def libPath =  getClientLibRoot(componentKey, kpathCodegen, true) 
+    def libPrefix =  getClientLibPrefix(componentKey, kpathCodegen)
+    def clientRepoRoot = getClientRepoRoot(componentKey, kpathCodegen)
+
+    def relLibSrcPath = "${pkgLibSrc}/${libPrefix}"
+    def relAppSrcPath = "${pkgAppSrc}"
+    def projectName = getClientProjectName(componentKey, kpathCodegen, false)
+    def includeWrapper = kpathCodegen.config.gradle.includeWrapper 
+
+    // Public API Export
+    def exportReplaceMap =  ["\\./" : "./${relLibSrcPath}/"]
+    replaceValuesInFile(componentKey, kpathCodegen, "${relLibSrcPath}/index.ts",  exportReplaceMap, "public_api.ts", true)
+  
+    // Add Content to replaced file 
+    addContentToFile(componentKey, kpathCodegen, "public_api.ts", "export * from \'./src/app/modules/header/header.module\';" )
+
+    // Angular CLI Template
+    def angularCliReplMap =  ["#client-project-name#": projectName,
+                                "#client-project-root#": pkgSrc,
+                                "#client-project-prefix#": projectName,
+                                "#client-lib-prefix#": libPrefix,
+                                "#client-lib-source-root#": "${relLibSrcPath}/src"]
+    replaceValuesInFile(componentKey, kpathCodegen, ".angular-cli.json.template", angularCliReplMap, ".angular-cli.json", false )
+
+    // JSON Package Template
+    def jsonPackageReplMap =  ["#client-lib-prefix#": libPrefix,
+                                "#client-project-version#": componentVersion,
+                                "#client-project-description#": "Swagger [${language}] Client API for KPATHS ${componentKey} Component",
+                                "#client-project-author#": kpathCodegen.config.author]
+    replaceValuesInFile(componentKey, kpathCodegen, "package.json.template", jsonPackageReplMap, "package.json", true )
+
+    // Index HTML Template
+    def indexHtmlReplMap =  ["#project-description#": "${kpathCodegen.config.name}: ${componentKey.toUpperCase()} v${componentVersion}"]
+    replaceValuesInFile(componentKey, kpathCodegen, "${pkgSrc}/index.html.template", indexHtmlReplMap, "${pkgSrc}/index.html", true )
+
+    // App Component HTML Template
+    def appComponentReplMap =  ["#project-description#": "${kpathCodegen.config.name}: ${componentKey.toUpperCase()} v${componentVersion}"]
+    replaceValuesInFile(componentKey, kpathCodegen, "${relAppSrcPath}/app.component.html.template", appComponentReplMap, "${relAppSrcPath}/app.component.html", true )
+ 
+    // Swagger Config 
+    def apiConfigReplMap =  ["@param": "param",
+                                "@returns": "returns"]
+    replaceValuesInFile(componentKey, kpathCodegen, "${relLibSrcPath}/configuration.ts", apiConfigReplMap, null, true )
+
+    // Gradle Build Template
+    def gradleReplMap =  ["#client-project-name#": libPrefix]
+
+    if(includeWrapper){
+        gradleReplMap.put("#default-task#", "defaultTasks \'pack\'")
+    }
+    
+    replaceValuesInFile(componentKey, kpathCodegen, "build.gradle.template", gradleReplMap, "build.gradle" , false)
+}
+ 
+def addContentToFile(componentKey, kpathCodegen, sourcePath, value ){
+
+    def rootPath =  getClientRepoRoot(componentKey, kpathCodegen)
+    def relPath = "${rootPath}/${sourcePath}" 
+    def exportFile = new File(relPath) 
+    def fileText = exportFile.text 
+
+    fileText = fileText + "\n" + value
+
+    exportFile.text = fileText 
+}
+
+def replaceValuesInFile(componentKey, kpathCodegen, sourcePath, valueMap, moveToPath, isAllValues ){
+ 
+    def rootPath =  getClientRepoRoot(componentKey, kpathCodegen)
+    def relPath = "${rootPath}/${sourcePath}" 
+    def exportFile = new File(relPath) 
+    def fileText = exportFile.text 
+    //println "METHOD: replaceValuesInFile ${relPath}"
+    //println "FILE TEXT: ${fileText}"
+
+    if(valueMap){
+        valueMap.each{ mapKey, mapValue ->  
+            println "${mapKey} : ${mapValue}"  
+            if(isAllValues){
+                fileText = fileText.replaceAll(mapKey, mapValue)
+            }
+            else{
+                fileText = fileText.replace(mapKey, mapValue)
+            }
+        }  
+    }
+    
+    //println "FILE TEXT REPLACED: ${fileText}" 
+    exportFile.text = fileText 
+
+    if(moveToPath){ 
+        exportFile.renameTo( new File("${rootPath}/${moveToPath}") ) 
+    } 
+}
+
+// def moveFile(sourcePath, targetPath){ 
+//     def targetFile = new File(sourcePath) 
+//     targetFile.renameTo( new File(targetPath) ) 
+// }
+
+import io.swagger.codegen.config.CodegenConfigurator
+import io.swagger.codegen.DefaultGenerator
+ 
+def generateSwaggerCode(kpathCodegen, componentKey ){
+  
+    def pkgLibRoot = ""  
+    def language = kpathCodegen.config.swagger.client.language 
+    
+    def specFilePath = buildFileName(componentKey, kpathCodegen)   
+    def outputDir = file(getClientLibRoot(componentKey, kpathCodegen, false))
+    
+    println "\nGenerating Client [${language}] api code for:  ${componentKey}"
+    println "\nGenerating Client to path: ${outputDir.path}" 
+    
+    def config = new CodegenConfigurator()
+    config.setInputSpec(specFilePath as String)
+    config.setOutputDir(outputDir.path as String)
+    config.setLang(language as String)
+    config.setAdditionalProperties([
+            'invokerPackage': "${pkgLibRoot}" as String,
+            'modelPackage'  : "${pkgLibRoot}model" as String,
+            'apiPackage'    : "${pkgLibRoot}api" as String,
+            'dateLibrary'   : 'java8'
+    ])
+    // config.setImportMappings([
+    //         'Dog': 'io.swagger.petstore.client.model.Dog'
+    // ])
+ 
+    new DefaultGenerator().opts(config.toClientOptInput()).generate() 
+}
+
+def getClientProjectName(componentKey, kpathCodegen, isTitle){
+ 
+    def clientRepoPfx = kpathCodegen.config.swagger.client.prefix.repo
+    def clientTitlePfx = kpathCodegen.config.swagger.client.prefix.title
+   
+    if(isTitle == true){
+        return "${clientTitlePfx}${componentKey.toLowerCase()}"
+    }
+
+    return "${clientRepoPfx}${componentKey.toLowerCase()}"
+}
+ 
+ def copyFilestoDirectory(  source, destination, excludeValue){
+  
+    wrapComment("line", "COPY FILES: From source directory [ ${source}]")
+
+    String sourceDir = source
+    String destinationDir = destination
+
+    if(!excludeValue){
+        excludeValue = "*.java"
+    }
+
+    ant.copy(todir: destinationDir) {
+        fileset(dir : sourceDir) {
+            exclude(name: excludeValue)
+        }
+    }
+
+    wrapComment("line", "COPY FILES: To destination directory [ ${destination}]")
+}
+  
 // Get the path for the locally installed binaries
 task npmBin << {
     new ByteArrayOutputStream().withStream { os ->
@@ -245,34 +449,27 @@ task npmBin << {
     }
 }
 
-//npmInstall.dependsOn(generateCode)
-//
-//clean.doFirst {
-//    delete(swaggerCodeGenOutputDir)
-//}
-// Install packages from package.json
-//task npmSwagger(type: Exec) {
-//    description = "Grab NodeJS dependencies (from package.json)"
-//
-//
-//    commandLine = [npmCommand, "install"]
-//    inputs.file "package.json"
-//    outputs.dir "node_modules"
-//
-//    tasks.npmBin.execute()
-//
-//}
+ 
+def cleanEntireBuildDir(){
+    println "CLEANING....${project.buildDir}"
+    def dir = new File(project.buildDir)
+    if (dir.isDirectory()) {
+        ant.delete(includeemptydirs: true) {
+            fileset(dir: dir, includes: '**/*', excludes: '')
+        }
+    }
+}
+task cleanBuildDir(description: 'Cleans up Build Directory') << {
 
-
-
+    cleanEntireBuildDir()
+}
+  
 task buildProjectManifest(type: Copy) {
     from 'templates/project'
-    into "$buildDir"
+    into 'templates/project'
     include 'projectinfo.html.template'
-    rename { file -> 'swagger-project-detail.html' }
+    rename { file -> 'index.html' }
     expand(project: project, title: 'Swagger Project Detail', generated: new Date())
-
-
 }
 
 configurations {
@@ -300,15 +497,11 @@ sourceSets {
 //compileSwaggerJava.dependsOn generateApi
 //classes.dependsOn swaggerClasses
 //compileJava.dependsOn compileSwaggerJava
-
-
-
+ 
+ 
 buildProjectManifest.dependsOn(initConfiguration)
 generateCode.dependsOn(buildProjectManifest)
-
-
-
-
+ 
 dependencies {
     swaggerCompile "org.springframework.boot:spring-boot-starter-web:$spring_boot_version"
     swaggerCompile 'io.swagger:swagger-annotations:1.5.16'
@@ -349,3 +542,33 @@ dependencies {
 //    }
 //
 //}
+
+// def replaceJsonPackageContent(componentKey, kpathCodegen){
+
+//     def clientApiDir = kpathCodegen.config.swagger.codeGenOutDir  
+//     def language = kpathCodegen.config.swagger.clientLanguage 
+//     def clientRepoPfx = kpathCodegen.config.swagger.clientRepoPfx   
+//     def filePath = "${getClientRepoRoot(componentKey, kpathCodegen)}/package.json"
+//     def version = "1.0.0"  // Need code to determine version
+
+//     println "replaceJsonPackageContent: ${filePath}"
+
+//     wrapComment("line", "Updating package.json: ${filePath}")
+
+//     def jsonFile = file(filePath) 
+//     def slurped = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+//     def builder = new groovy.json.JsonBuilder(slurped)
+    
+//     builder.content.name = getClientProjectName(componentKey, kpathCodegen, true) //"@Kpaths/client-api-${componentKey.toLowerCase()}"
+//     builder.content.version = version
+//     builder.content.description = "Swagger [${language}] client for KPATHS ${componentKey} Component"
+//     builder.content.author = "Kaiser Permanente CD-BIO Engineering"
+
+
+//     // Get the new JSON string
+//     //String newJson = builder.toPrettyString()
+
+//     // And write it out to the file again
+//     jsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
+
+// }

@@ -1,0 +1,46 @@
+import groovy.json.JsonSlurper
+plugins {
+  id "com.moowork.node" version "1.2.0"
+}
+
+node {
+  version = '8.4.0'
+  npmVersion = '5.6.0'
+  //typescript='2.4.2'
+  download = true
+  workDir = file("${project.buildDir}/node")
+  nodeModulesDir = file("${project.projectDir}")
+}
+
+def clientProjectName ="#client-project-name#"
+
+#default-task#
+
+// NOTE: Not currently using for generated libraries
+//task test(type: NpmTask, dependsOn: 'npmInstall') {
+//  args = ['run', 'test']
+//}
+
+//task lint(type: NpmTask, dependsOn: 'test') {
+//  args = ['run', 'lint']
+//}
+
+task build(type: NpmTask, dependsOn: 'npmInstall') {
+  args = ['run', 'build']
+}
+
+task packagr(type: NpmTask, dependsOn: 'build') {
+  args = ['run', 'packagr']
+}
+
+task pack(type: NpmTask, dependsOn: 'packagr') {
+  args = ['pack', "${project.projectDir}/dist"]
+}
+
+task publish(type: NpmTask, dependsOn: 'pack') {
+  def packageSlurper = new JsonSlurper()
+  def packageJson = packageSlurper.parse file('package.json')
+  logger.debug(packageJson.version)
+  args = ['publish', "${clientProjectName}-${packageJson.version}.tgz"]
+}
+ 

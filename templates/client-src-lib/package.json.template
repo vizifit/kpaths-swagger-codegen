@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/ng-packagr/package.schema.json",
+  "name": "#client-project-name#",
+  "version": "#client-project-version#",
+  "description": "#client-project-description#",
+  "author": "#client-project-author#",
+  "license": "MIT",
+  "private": true,
+  "peerDependencies": {
+    "@angular/common": "^5.1.0",
+    "@angular/core": "^5.1.0"
+  },
+  "ngPackage": {
+    "lib": {
+      "entryFile": "public_api.ts"
+    },
+    "dest": "../../#client-lib-root#"
+  }
+}
