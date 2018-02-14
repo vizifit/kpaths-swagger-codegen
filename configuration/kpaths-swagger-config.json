@@ -10,19 +10,19 @@
             "componentList": [
                 {
                     "key": "booking",
-                    "version": "1.0.18",
+                    "version": "1.0.39",
                     "href": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 },
                 {
                     "key": "facilityinfo",
-                    "version": "1.0.18",
+                    "version": "1.0.39",
                     "href": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 },
                 {
                     "key": "main",
-                    "version": "1.0.18",
+                    "version": "1.0.39",
                     "href": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 }
