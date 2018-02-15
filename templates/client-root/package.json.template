@@ -1,5 +1,5 @@
 {
-    "name": "#client-lib-prefix#", 
+    "name": "#client-project-api-name#", 
     "version": "#client-project-version#",
     "description": "#client-project-description#",
     "author": "#client-project-author#",
@@ -11,7 +11,8 @@
         "test": "ng test",
         "lint": "ng lint",
         "e2e": "ng e2e",
-        "packagr": "ng-packagr -p ng-package.json"
+        "packagr": "ng-packagr -p ng-package.json",
+        "compodoc": "./node_modules/.bin/compodoc -p src/tsconfig.json"
     },
     "private": false,
     "dependencies": {

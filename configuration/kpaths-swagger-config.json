@@ -10,20 +10,23 @@
             "componentList": [
                 {
                     "key": "booking",
-                    "version": "1.0.18",
-                    "href": "http://petstore.swagger.io/v2/swagger.json",
+                    "title": "Booking",
+                    "version": "1.0.30",
+                    "endpoint": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 },
                 {
                     "key": "facilityinfo",
-                    "version": "1.0.18",
-                    "href": "http://petstore.swagger.io/v2/swagger.json",
+                    "title": "FacilityInfo",
+                    "version": "1.0.30",
+                    "endpoint": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 },
                 {
                     "key": "main",
-                    "version": "1.0.18",
-                    "href": "http://petstore.swagger.io/v2/swagger.json",
+                    "title": "Main",
+                    "version": "1.0.30",
+                    "endpoint": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 }
             ]
@@ -41,7 +44,8 @@
                 "prefix": {
                     "repo": "kpaths-clientapi",
                     "module": "kpaths-client-api",
-                    "title": "@KPaths/client-api"
+                    "title": "@kpaths/client-api",
+                    "nexusTitle": "@kpaths/client-api"
                 },
                 "suffix": {
                     "specification": "-specification"

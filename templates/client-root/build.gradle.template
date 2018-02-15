@@ -32,6 +32,10 @@ task build(type: NpmTask, dependsOn: 'npmInstall') {
 task packagr(type: NpmTask, dependsOn: 'build') {
   args = ['run', 'packagr']
 }
+ 
+//task compodoc(type: NpmTask, dependsOn: 'packagr') {
+//  args = ['run', 'compodoc]
+//}
 
 task pack(type: NpmTask, dependsOn: 'packagr') {
   args = ['pack', "${project.projectDir}/dist"]
