@@ -11,22 +11,22 @@
                 {
                     "key": "booking",
                     "title": "Booking",
-                    "endpoint": "http://petstore.swagger.io/v2/swagger.json",
-                    "version": "1.0.42",
+                    "endpoint": "http://ebadwb2.har.ca.kp.org:9093/BookingRestConnector-v4/kpaths/api/v2/api-docs",
+                    "version": "1.0.55",
                     "active": true
                 },
                 {
                     "key": "facilityinfo",
                     "title": "FacilityInfo",
-                    "version": "1.0.33",
-                    "endpoint": "http://petstore.swagger.io/v2/swagger.json",
+                    "version": "1.0.46",
+                    "endpoint": "http://ebadwb2.har.ca.kp.org:9096/FacilityInformationRestConnector-v4/kpaths/api/v2/api-docs",
                     "active": true
                 },
                 {
                     "key": "main",
                     "title": "Main",
-                    "version": "1.0.33",
-                    "endpoint": "http://petstore.swagger.io/v2/swagger.json",
+                    "version": "1.0.46",
+                    "endpoint": "http://ebadwb2.har.ca.kp.org:9097/KPATHSRestConnector-v4/kpaths/api/v2/api-docs",
                     "active": true
                 }
             ]

@@ -15,16 +15,7 @@ node {
 def clientProjectName ="#client-project-name#"
 
 #default-task#
-
-// NOTE: Not currently using for generated libraries
-//task test(type: NpmTask, dependsOn: 'npmInstall') {
-//  args = ['run', 'test']
-//}
-
-//task lint(type: NpmTask, dependsOn: 'test') {
-//  args = ['run', 'lint']
-//}
-
+  
 task build(type: NpmTask, dependsOn: 'npmInstall') {
   args = ['run', 'build']
 }
@@ -33,9 +24,9 @@ task packagr(type: NpmTask, dependsOn: 'build') {
   args = ['run', 'packagr']
 }
  
-//task compodoc(type: NpmTask, dependsOn: 'packagr') {
-//  args = ['run', 'compodoc]
-//}
+task compodoc(type: NpmTask, dependsOn: 'packagr') {
+  args = ['run', 'compodoc']
+}
 
 task pack(type: NpmTask, dependsOn: 'packagr') {
   args = ['pack', "${project.projectDir}/dist"]

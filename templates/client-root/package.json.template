@@ -12,7 +12,7 @@
         "lint": "ng lint",
         "e2e": "ng e2e",
         "packagr": "ng-packagr -p ng-package.json",
-        "compodoc": "./node_modules/.bin/compodoc -p src/tsconfig.json"
+        "compodoc": "./node_modules/.bin/compodoc -p tsconfig.json"
     },
     "private": false,
     "dependencies": {

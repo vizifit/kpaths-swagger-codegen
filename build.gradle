@@ -43,19 +43,20 @@ ext {
     bowerCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? 'bower.cmd' : 'bower'
 }
 
-defaultTasks  'generateCode'
+//defaultTasks  'generateCode'
 
 version = '1.0.1'
 group = 'org.kp.cccs.kpaths'
  
 def kpathCodegenPath = './configuration/kpaths-swagger-config.json'
 def kpathCodegen
- 
-
+  
 // Tasks
-task initConfiguration {
 
-    delete(buildDir)
+
+task initConfiguration {
+ 
+    delete "${project.buildDir}" 
 
     def jsonFile = file(kpathCodegenPath)
     kpathCodegen = new groovy.json.JsonSlurper().parseText(jsonFile.text)
@@ -71,6 +72,13 @@ task initConfiguration {
     }
 }
 
+task generateCode {
+
+   prepareForBuild(kpathCodegen)
+   downloadSpecificationFiles(kpathCodegen)
+   generateClientApiLibrary(kpathCodegen)
+}
+
 def beautifyJsonFile(filePath){
 
     def jsonFile = file(filePath) 
@@ -80,12 +88,8 @@ def beautifyJsonFile(filePath){
      // Write updated configuration
     jsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
 }
-task generateCode {
 
-    prepareForBuild(kpathCodegen)
-    downloadSpecificationFiles(kpathCodegen)
-    generateClientApiLibrary(kpathCodegen)
-}
+
 
 
 def prepareForBuild(kpathCodegen){ 
@@ -482,19 +486,15 @@ task npmBin << {
 }
 
  
-def cleanEntireBuildDir(){
-    println "CLEANING....${project.buildDir}"
-    def dir = new File(project.buildDir)
-    if (dir.isDirectory()) {
-        ant.delete(includeemptydirs: true) {
-            fileset(dir: dir, includes: '**/*', excludes: '')
-        }
-    }
-}
-task cleanBuildDir(description: 'Cleans up Build Directory') << {
-
-    cleanEntireBuildDir()
-}
+// def cleanEntireBuildDir(){
+//     println "CLEANING....${project.buildDir}"
+//     def dir = new File(project.buildDir)
+//     if (dir.isDirectory()) {
+//         ant.delete(includeemptydirs: true) {
+//             fileset(dir: dir, includes: '**/*', excludes: '')
+//         }
+//     }
+// } 
   
 task buildProjectManifest(type: Copy) {
     from 'templates/project'
