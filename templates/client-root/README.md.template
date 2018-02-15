@@ -8,6 +8,14 @@ To build an compile the typescript sources to javascript use:
 
 ```
 
+### Building with Gradle and [Compodoc](https://compodoc.github.io/website/guides/getting-started.html) Documentation
+
+To build compodoc documentation:
+```
+./gradlew compodoc
+
+```
+
 ### publishing
 
 This repository is not intended for publishing directly. 

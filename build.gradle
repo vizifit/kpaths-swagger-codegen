@@ -123,14 +123,12 @@ def downloadSpecificationFiles(kpathCodegen){
 
     wrapComment("line", "START: Downloading specification files...")
 
-    
     // Loop through specification data
     for ( component in componentList ) {
-
-        def filename = buildFileName(component.key.toLowerCase(), kpathCodegen)
         if(component.active){
 
-            def filename =  buildFileName(component.key.toLowerCase(), kpathCodegen)
+            def filename = buildFileName(component.key.toLowerCase(), kpathCodegen)
+
             download {
                 src component.endpoint
                 dest file( filename ) 
@@ -204,6 +202,9 @@ def generateClientApiLibrary(kpathCodegen){
             replaceProjectTemplateFileValues(kpathCodegen, component) 
         }
     } 
+
+    copyComponentsToDeploy(kpathCodegen)
+
     wrapComment("line", "COMPLETED: Generating Client api...")
 }
 
@@ -278,6 +279,16 @@ def copyProjectTemplateFiles(kpathCodegen, component){
     if(includeWrapper){
         copyFilestoDirectory( tmplDir.gradle, getClientRepoRoot(component.key, kpathCodegen), null )
     }
+}
+
+def copyComponentsToDeploy(kpathCodegen){
+
+    wrapComment("line", "COPYING: Moving files to deployment directory...")
+    def configDir = kpathCodegen.config.swagger.dir
+
+    // Manipulate code after SwaggerGeneration
+    copyFilestoDirectory( configDir.clientApi, configDir.deployment, null ) 
+
 }
 
 

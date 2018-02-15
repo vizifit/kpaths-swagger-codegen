@@ -12,20 +12,20 @@
                     "key": "booking",
                     "title": "Booking",
                     "endpoint": "http://petstore.swagger.io/v2/swagger.json",
-                    "version": "1.0.39",
+                    "version": "1.0.42",
                     "active": true
                 },
                 {
                     "key": "facilityinfo",
                     "title": "FacilityInfo",
-                    "version": "1.0.30",
+                    "version": "1.0.33",
                     "endpoint": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 },
                 {
                     "key": "main",
                     "title": "Main",
-                    "version": "1.0.30",
+                    "version": "1.0.33",
                     "endpoint": "http://petstore.swagger.io/v2/swagger.json",
                     "active": true
                 }
@@ -65,7 +65,8 @@
                 "clientSrcLib": "templates/client-src-lib",
                 "clientSrcApp": "templates/client-src-app",
                 "project": "templates/project",
-                "gradle": "templates/gradle-wrapper"
+                "gradle": "templates/gradle-wrapper",
+                "deploy": "deploy"
             }
         },
         "gradle": {
