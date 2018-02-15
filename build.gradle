@@ -7,6 +7,7 @@ buildscript {
         }
     }
     dependencies {
+        classpath "io.swagger:swagger-codegen-cli:2.3.1"
         classpath "io.swagger:swagger-codegen:2.3.1"
         classpath "com.moowork.gradle:gradle-node-plugin:1.2.0"
     }
@@ -37,6 +38,7 @@ ext {
     jodatime_version = '2.3'
     junit_version = '4.8.1'
     swagger_codegen_version ='2.3.1'
+    swagger_codegen_cli_version ='2.3.1'
     npmCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? 'npm.cmd' : 'npm'
     bowerCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? 'bower.cmd' : 'bower'
 }
@@ -127,6 +129,8 @@ def downloadSpecificationFiles(kpathCodegen){
 
         def filename = buildFileName(component.key.toLowerCase(), kpathCodegen)
         if(component.active){
+
+            def filename =  buildFileName(component.key.toLowerCase(), kpathCodegen)
             download {
                 src component.endpoint
                 dest file( filename ) 
@@ -136,6 +140,15 @@ def downloadSpecificationFiles(kpathCodegen){
         }
     } 
     wrapComment("line", "COMPLETED: Downloading specification files...") 
+}
+
+def beautifyJson(filePath){
+    def jsonFile = file(filePath) 
+    def slurped = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+    def builder = new groovy.json.JsonBuilder(slurped)
+
+    // Beautify JSON
+    jsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
 }
 
 def getClientRepoRoot(componentKey, kpathCodegen){
@@ -505,12 +518,17 @@ sourceSets {
 //compileSwaggerJava.dependsOn generateApi
 //classes.dependsOn swaggerClasses
 //compileJava.dependsOn compileSwaggerJava
- 
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
  
 buildProjectManifest.dependsOn(initConfiguration)
 generateCode.dependsOn(buildProjectManifest)
  
 dependencies {
+
+    compile gradleApi()
+    compile localGroovy()
+
     swaggerCompile "org.springframework.boot:spring-boot-starter-web:$spring_boot_version"
     swaggerCompile 'io.swagger:swagger-annotations:1.5.16'
     swaggerCompile 'com.squareup.okhttp:okhttp:2.7.5'
@@ -518,7 +536,8 @@ dependencies {
     swaggerCompile 'com.google.code.gson:gson:2.8.1'
 
     //compile sourceSets.swagger.output
-
+    compile 'io.swagger:swagger-jaxrs:1.5.13'
+    compile 'io.swagger:swagger-jersey-jaxrs:1.5.13'
     compile "com.sun.jersey:jersey-client:$jersey_version"
     compile "com.sun.jersey.contribs:jersey-multipart:$jersey_version"
     compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
@@ -526,6 +545,7 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:2.1.5"
     compile "joda-time:joda-time:$jodatime_version"
+    compile "io.swagger:swagger-codegen-cli:$swagger_codegen_cli_version"
     compile "io.swagger:swagger-codegen:$swagger_codegen_version"
 
     testCompile "junit:junit:$junit_version"

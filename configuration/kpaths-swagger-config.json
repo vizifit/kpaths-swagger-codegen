@@ -11,8 +11,8 @@
                 {
                     "key": "booking",
                     "title": "Booking",
-                    "version": "1.0.30",
                     "endpoint": "http://petstore.swagger.io/v2/swagger.json",
+                    "version": "1.0.39",
                     "active": true
                 },
                 {
