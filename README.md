@@ -1,220 +1,98 @@
-# Sample Packaging Application
+## KPATHS Swagger Codegen Utility
+This utility will generate a collection of  [Angular](https://angular.io/) `5.0+` librarie projects that will be staged in the CCCS repository for upload to the secure, Nexus repository for consumption in the `Kpaths-ui` project. There are many additional features this utility provides about what the Swagger Code Generation provides by default. 
 
-This app was put together to show how to create and distribute an Angular library. It corresponds with the talk given at the Angular Mountain View Meetup ([video here](https://www.youtube.com/watch?v=c8Acc94s8aQ)).
+### Key features
 
-The steps below correspond to commits in this repo (after initial setup) so you should be able to refer to the individual commits to see the changes made.
+1. Multiple Projects: Generation of multiple projects simultaneously
 
-This project uses the [Angular CLI](https://github.com/angular/angular-cli) and [Nx](https://github.com/nrwl/nx) as the base application. The techniques described for building libraries should work for most projects whether they use these or not. Paths and some of the build steps might be slightly different, but should be easily applicable to most projects.
+2. Version Bumping: Automatically bump the version of each time a new build is generated (active components)
 
-This example uses the NgPackagr project. If for some reason this project won't work for your application's needs, [Juri Strumpflohner](https://github.com/juristr) gave [a great talk](https://www.youtube.com/watch?v=K4YMmwxGKjY) on a more manual setup that allows fine-grained configuration.
+3. Gradle: [Gradle](https://gradle.org/) Gradle build script and configurable wrapper
 
-## Steps
+4. Documentation: [Compodoc](https://compodoc.github.io/website/guides/getting-started.html)
 
-### Step 0: Initial Setup
+5. Templates: Templates for additional project configuration, formatting and functionality
 
-Make sure you have the Angular CLI installed. This application was put together using schematics from the `nx` library, so install those as well:
+6. Packaging & Consumption: Easily package and create `.tgz` (Tarball files) for easly consuming in local projects
 
-`npm install -g @angular/cli @nrwl/schematics` or `yarn global add @angular/cli @nrwl/schematics`
+7. Beautifying Swagger Specification Files: Easily read or validate Swagger Specification files downloaded locally
 
-Clone this repo and run `npm install` or `yarn`.
+8. Component Project Details: Index.html manifest detailing project information & dependencies
 
-The app is initially set up to map the library through the repository name plus the library name.  So the import is `import {NgxTabsLibModule} from '@angular-cli-lib-example/ngx-tabs-lib';`. Using the Angular CLI you can build and run the small sample application with two tabs (the tabs are part of the library):
+9. Future Capability: There is much more room for extending the capabilty of this script
 
-`ng serve`
+## Configuration
 
-Open a browser to http://localhost:4200
+### Configuration Properties
+Located inside the `Configuration` folder is file named `kpaths-swagger-config.json`. Listed below is a list of configurations that can be set from various properites for updating the functionality of the `KPATHS Swagger Codegen` utility.
 
-### Step 1: Name and map the library
+### Building with Gradle
 
-Adjust the import name to what I want to publish this library as. In this case, it should be `ngx-tabs-lib`. This requires changing `paths` property of the `tsconfig.json` file:
-
+To build an compile the typescript sources to javascript use:
 ```
-{
-  "compilerOptions": {
-    // ...
-    "baseUrl": ".",
-    "paths": {
-      "ngx-tabs-lib": ["libs/ngx-tabs-lib"]
-    }
-  },
-  ...
-}
+./gradlew generateCode
 
 ```
 
-Also, imports in the project pointing to `@angular-cli-lib-example/ngx-tabs-lib` should now just point to `ngx-tabs-lib`.
+#### To include the Gradle Wrapper in Generated Component build:
+( location `config.gradle` )
 
-### Step 2: Library package.json
+``` 
+  "gradle": {
+            "includeWrapper": true
+        }
+``` 
 
-A library needs a `package.json` file when distributed to NPM. So we should create this file for our library.
-
-Because it's a library, you don't want all the same dependencies as your project. The dependencies should be trimmed down to the minimal ones needed. In this case, the `package.json` should look something like this (note it's marked as `private` so it doesn't accidentally get published to NPM):
-
-```
-{
-  "name": "ngx-tabs-lib",
-  "version": "0.0.0",
-  "license": "MIT",
-  "private": true,
-  "peerDependencies": {
-    "@angular/common": "^5.1.0",
-    "@angular/core": "^5.1.0"
-  }
-}
-```
-
-### Step 3: Add ng-packagr
-
-Add the [`ng-packagr`](https://github.com/dherges/ng-packagr) as a dev dependency for your project. Currently  version 2 is the one supporting Angular v5, but it's still in release candidate. Install with the `@next` version:
-
-`npm install --save-dev ng-packagr@next`
-`yarn add --dev ng-packagr@next`
-
-### Step 4: Configure ng-packagr
-
-Configure a `package.json` script to run `ng-packagr`. The command takes a `--project` (or `-p`) argument  pointing to the `package.json` file for the library being built. If you don't provide this, it will use your root `package.json` file. The changes to your **root** package.json file look something like this:
+#### To update the component version:
+( location `config.kpaths` )
 
 ```
-  "scripts": {
-    "build:lib": "ng-packagr -p libs/ngx-tabs-lib/package.json"
-  }
-```
-
-Running `npm run build:lib` (or `yarn build:lib`) will execute this command. However, it will throw an error until you configure your **library** `package.json`. First you want to add a `$schema` property which allows your IDE to provide typeahead suggestions for the `ngPackage` custom property in `package.json`. You should then configure an `entryFile` for the library. This will often be your `index.ts` file or `public_api.ts`. You should also configure the distribution directory. The  updated library `package.json` looks something like this:
+ bumpVersion: `true`
+ bumpVersionStep: `patch` \\ patch, minor, major
 
 ```
-{
-  "$schema": "../../node_modules/ng-packagr/package.schema.json",
-  "name": "ngx-tabs-lib",
-  "version": "0.0.0",
-  "license": "MIT",
-  "private": true,
-  "peerDependencies": {
-    "@angular/common": "^5.1.0",
-    "@angular/core": "^5.1.0"
-  },
-  "ngPackage": {
-    "lib": {
-      "entryFile": "public_api.ts"
-    },
-    "dest": "../../dist/ngx-tabs-lib"
-  }
-}
-```
 
-You can now run `npm run build:lib` and see your built package in the `dist` folder. This package can be picked up and published straight to NPM.
-
-### Step 5 [Optional]: Build app against built library
-
-It's generally a good idea to test building your application against the distribution version of your  library. In order to do this with the CLI, you will need to create some new `tsconfig` files and a new app in the CLI. The new `tsconfig` files should point to the built version of your library. And the new app in the CLI should point to the new `tsconfig` file:
-
-**`./tsconfig.packaged.json`**: In the root of the project, refer to the distributed sources
-```
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "paths": {
-      "ngx-tabs-lib": ["ngx-tabs-lib"]
-    }
-  }
-}
-```
-
-> NOTE: Due to a [current issue](https://github.com/angular/angular-cli/issues/7714) in the CLI, you will need to build your libraries to your project root, which is why the `paths` option above isn't `dist/ngx-tabs-lib`. The corresponding change should be made in your library's `package.json` in the `ngPackage > dest` path. You will probably also want to add the library dist directory name to your `.gitignore` so you don't accidentally commit it.
-
-**./apps/demo/src/tsconfig.packaged.json**: In your app, add a new `tsconfig.packaged.json` file. It should extend from the root `tsconfig.packaged.json` and update the `outDir`:
-```
-{
-  "extends": "../../../tsconfig.packaged.json",
-  "compilerOptions": {
-    "outDir": "../../../dist/apps/demo-packaged",
-    "module": "es2015"
-  },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "**/*.spec.ts"
-  ]
-}
-```
-
-**./.angular-cli.json**: Create a new app pointing to this new config. In this case, the app was called `demo`, so I copied the `demo` config from the `apps` property and modified the `name`, `outDir`, and `tsconfig` properties, leaving the rest unchanged. This sample only shows relevant changes:
+#### To update the component details:
+( location `config.kpaths.componentList` )
 
 ```
-{
-  // ... other properties remain unchanged
-  "apps": [
-    // ... other apps
-    {
-      "name": "demo-packaged",
-      "outDir": "dist/apps/demo-packaged",
-      "tsconfig": "tsconfig.packaged.json",
-      // ... other configs should match the app you copied
-    }
-  ]
-}
-```
+// Note: Setting `active` to false will exclude the component from being generated
 
-### Step 6 [Optional]: Private APIs
-
-The Angular Compiler provides a mechanism to expose private APIs. In fact, directives you declare in the library and any services you export will get a private symbol in the resulting build. Take a look at the `d.ts` file generated for this library (`ngx-tabs-lib.d.ts` became the default as that's the name of our library in the `package.json`):
+"componentList": [
+                {
+                    "key": "booking",
+                    "title": "Booking",
+                    "endpoint": "http://my-endpoint/api/v2/api-docs",
+                    "version": "1.0.0",
+                    "active": true 
+                }]
 
 ```
-/**
- * Generated bundle index. Do not edit.
- */
-export * from './public_api';
-export { TabComponent as ɵb } from './src/tab/tab.component';
-export { TabsComponent as ɵa } from './src/tabs/tabs.component';
-```
 
-The components are exported with a barred-o character (`ɵ`) followed by a single letter. The Angular compiler needs these symbols to be exported to manage compilation. However, you can customize the exported name so you can use these private exports in your other dependent libraries. If you export a private symbol prefixed by the `ɵ` character, that name will be retained. So modifying the `public_api.ts` file we can control the exported name:
+#### To update the build directories:
+( location `config.swagger.dir` )
 
-**./libs/ngx-tabs-lib/public_api.ts:**
-```
-export { NgxTabsLibModule } from './src/ngx-tabs-lib.module';
-export {TabsComponent as ɵTabsComponent} from './src/tabs/tabs.component';
-export {TabComponent as ɵTabComponent} from './src/tab/tab.component';
-```
-
-This resuls in a different `ngx-tabs-lib.d.ts` in a new build:
-```
-/**
- * Generated bundle index. Do not edit.
- */
-export * from './public_api';
-```
-
-And now the `public_api.ts` file retained the renamed component names:
+``` 
+ "dir": {
+            "root": "build/swagger",
+            "clientApi": "build/swagger/clientApi",
+            "clientSpec": "build/swagger/clientSpec",
+            "deployment": "build/swagger/deploy"
+        }
 
 ```
-export { NgxTabsLibModule } from './src/ngx-tabs-lib.module';
-export { TabsComponent as ɵTabsComponent } from './src/tabs/tabs.component';
-export { TabComponent as ɵTabComponent } from './src/tab/tab.component';
-```
 
-Now if you want, you can import these symbols across packages:
+#### To update the template directories:
+( location `config.templates.dir` )
 
-**./apps/demo/src/app/app.component:**
-```
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { ɵTabsComponent as TabsComponent } from 'ngx-tabs-lib';
-import { Container } from '@angular/compiler/src/i18n/i18n_ast';
+``` 
+"dir": {
+            "clientRoot": "templates/client-root",
+            "clientSrc": "templates/client-src",
+            "clientSrcLib": "templates/client-src-lib",
+            "clientSrcApp": "templates/client-src-app",
+            "project": "templates/project",
+            "gradle": "templates/gradle-wrapper",
+            "deploy": "deploy"
+        }
 
-@Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
-})
-export class AppComponent implements OnInit {
-  @ViewChild(TabsComponent) tabs: TabsComponent;
-
-  constructor() {}
-
-  ngOnInit() {
-    console.log(this.tabs);
-  }
-
-}
-```

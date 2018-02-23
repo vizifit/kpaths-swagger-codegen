@@ -51,9 +51,7 @@ group = 'org.kp.cccs.kpaths'
 def kpathCodegenPath = './configuration/kpaths-swagger-config.json'
 def kpathCodegen
   
-// Tasks
-
-
+// Tasks 
 task initConfiguration {
  
     delete "${project.buildDir}" 
@@ -207,7 +205,7 @@ def generateClientApiLibrary(kpathCodegen){
         }
     } 
 
-    copyComponentsToDeploy(kpathCodegen)
+    //copyComponentsToDeploy(kpathCodegen)
 
     wrapComment("line", "COMPLETED: Generating Client api...")
 }
@@ -228,33 +226,34 @@ def updateComponentBuildVersion(kpathCodegen, kpathCodegenPath){
     for ( component in componentList ) {
         if(component.active){ 
  
-            def versionParts = component.version.split('\\.')
-            def updatedVersion = "" 
-            def major = versionParts[0]
-            def minor = versionParts[1]
-            def patch = versionParts[2]
+            def updatedVersion = updateSemVer(component.version, bumpVersionStep)
+            // def versionParts = component.version.split('\\.')
+            // def updatedVersion = "" 
+            // def major = versionParts[0]
+            // def minor = versionParts[1]
+            // def patch = versionParts[2]
 
-            def updateValue = 0
-            switch(bumpVersionStep){
+            // def updateValue = 0
+            // switch(bumpVersionStep){
 
-                case "major":
-                    updateValue = major as int
-                    updateValue++
-                    updatedVersion =  "${updateValue}.${minor}.${patch}"
-                    break
+            //     case "major":
+            //         updateValue = major as int
+            //         updateValue++
+            //         updatedVersion =  "${updateValue}.${minor}.${patch}"
+            //         break
 
-                case "minor":
-                    updateValue = minor as int
-                    updateValue++
-                    updatedVersion =  "${major}.${updateValue}.${patch}"
-                    break
+            //     case "minor":
+            //         updateValue = minor as int
+            //         updateValue++
+            //         updatedVersion =  "${major}.${updateValue}.${patch}"
+            //         break
 
-                case "patch":
-                    updateValue = patch as int
-                    updateValue++
-                    updatedVersion =  "${major}.${minor}.${updateValue}"
-                    break
-            } 
+            //     case "patch":
+            //         updateValue = patch as int
+            //         updateValue++
+            //         updatedVersion =  "${major}.${minor}.${updateValue}"
+            //         break
+            // } 
             builder.content.config.kpaths.componentList[ counter ].version = updatedVersion
             println("Bumping ${bumpVersionStep} version from ${component.version} to ${updatedVersion} for component: ${component.key}" )
         }
@@ -266,6 +265,39 @@ def updateComponentBuildVersion(kpathCodegen, kpathCodegenPath){
     jsonFile.withWriter( 'UTF-8' ) { it << builder.toPrettyString() }
     
     wrapComment("line", "COMPLETED: Updating component versionsUpdating component versions for ${bumpVersionStep}...")
+}
+
+def updateSemVer(version, bumpVersionStep){
+    
+    def versionParts = version.split('\\.')
+    def updatedVersion = "" 
+    def major = versionParts[0]
+    def minor = versionParts[1]
+    def patch = versionParts[2]
+
+    def updateValue = 0
+    switch(bumpVersionStep){
+
+        case "major":
+            updateValue = major as int
+            updateValue++
+            updatedVersion =  "${updateValue}.${minor}.${patch}"
+            break
+
+        case "minor":
+            updateValue = minor as int
+            updateValue++
+            updatedVersion =  "${major}.${updateValue}.${patch}"
+            break
+
+        case "patch":
+            updateValue = patch as int
+            updateValue++
+            updatedVersion =  "${major}.${minor}.${updateValue}"
+            break
+    } 
+
+    return updatedVersion
 }
 
 def copyProjectTemplateFiles(kpathCodegen, component){
@@ -328,7 +360,8 @@ def replaceProjectTemplateFileValues(kpathCodegen, component){
     replaceValuesInFile(component.key, kpathCodegen, ".angular-cli.json.template", angularCliReplMap, ".angular-cli.json", false )
 
     // JSON Package Template
-    def jsonPackageReplMap =  ["#client-project-api-name#": projectApiName,
+    def jsonPackageReplMap =  ["#client-project-repo#": projectName,
+                                "#client-project-api-name#": projectApiName,
                                 "#client-project-version#": component.version,
                                 "#client-project-description#": "Swagger [${language}] Client API for KPATHS ${component.key} Component",
                                 "#client-project-author#": kpathCodegen.config.author]

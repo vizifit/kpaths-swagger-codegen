@@ -14,7 +14,7 @@ node {
 
 def clientProjectName ="#client-project-name#"
 
-#default-task#
+// #default-task#
   
 task build(type: NpmTask, dependsOn: 'npmInstall') {
   args = ['run', 'build']
@@ -24,7 +24,7 @@ task packagr(type: NpmTask, dependsOn: 'build') {
   args = ['run', 'packagr']
 }
  
-task compodoc(type: NpmTask, dependsOn: 'packagr') {
+task compodoc(type: NpmTask, dependsOn: 'pack') {
   args = ['run', 'compodoc']
 }
 
